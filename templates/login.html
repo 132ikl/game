@@ -1,0 +1,23 @@
+{% extends "min.html" %}
+
+{% block min_content %}
+<form class="login mid mid-v" method="POST">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for message in messages %}
+          {{ message }}
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <div>
+        <label for=username>username:</label>
+        <input type=text name=username></input>
+    </div>
+    <div>
+        <label for=password>password:</label>
+        <input type=password name=password></input>
+    </div>
+    <input formaction="/login" type="submit" value="login">
+    <input formaction="/register" type="submit" value="register">
+</form>
+{% endblock %}

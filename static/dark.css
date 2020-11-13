@@ -1,0 +1,12 @@
+html {
+    background: #302f33;
+    color: #fff;
+}
+
+a {
+    color: coral;
+}
+
+a:visited {
+    color: lightcoral;
+}

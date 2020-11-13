@@ -1,0 +1,11 @@
+{% extends "min" %}
+
+{% block min_content %}
+<div class="col right">
+    <p>playing as {{ player.username }}</p>
+    <p>points: {{ player.points }}</p>
+    <p class="small"><a href="/">home</a> | <a href="/logout">logout</a></p>
+    <p class="small"><a href="/leaderboard">leaderboard</a> | <a href="/shop">shop</a></p>
+</div>
+{% block content %}{% endblock %}
+{% endblock %}

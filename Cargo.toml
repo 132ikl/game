@@ -1,0 +1,18 @@
+[package]
+name = "game"
+version = "0.1.0"
+authors = ["132ikl <132@ikl.sh>"]
+edition = "2018"
+
+[dependencies]
+json = "^0.12.4"
+rocket = "^0.4.6"
+
+[dependencies.serde]
+version = "^1.0.117"
+features = ["derive"]
+
+[dependencies.rocket_contrib]
+version = "^0.4.6"
+default-features = false
+features = ["serve", "tera_templates"]

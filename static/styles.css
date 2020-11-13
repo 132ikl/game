@@ -1,0 +1,40 @@
+.mid-v {
+    margin-top: 25vh;
+}
+
+p { 
+    margin: 0em;
+}
+
+ol {
+    padding-left: 0;
+    list-style-position: inside;
+}
+
+.login {
+    display: block;
+}
+
+.login * {
+    margin-top: .4vh;
+}
+
+.small {
+    font-size: small;
+}
+
+.left {
+    text-align: left;
+}
+
+.mid {
+    text-align: center;
+}
+
+.right {
+    text-align: right;
+}
+
+.item {
+    margin-bottom: 5vh;
+}
