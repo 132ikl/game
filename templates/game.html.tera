@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="col mid mid-v">
-    {% if player.ready %}
+    {% if profile %}
         <p>press button to get</p>
     {% else %}
         {% if message %}

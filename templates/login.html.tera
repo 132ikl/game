@@ -1,14 +1,10 @@
-{% extends "min.html" %}
+{% extends "min" %}
 
 {% block min_content %}
 <form class="login mid mid-v" method="POST">
-    {% with messages = get_flashed_messages() %}
-      {% if messages %}
-        {% for message in messages %}
-          {{ message }}
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
+    {% if message %}
+        {{ message }}
+    {% endif %}
     <div>
         <label for=username>username:</label>
         <input type=text name=username></input>

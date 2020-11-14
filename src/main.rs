@@ -1,59 +1,150 @@
 #![feature(proc_macro_hygiene, decl_macro)]
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 mod database;
 
-use bcrypt;
-use rocket::request::FlashMessage;
-use rocket::response::{Flash, Redirect};
-use rocket_contrib::{serve::StaticFiles, templates::{tera::Context, Template}};
-use serde::Serialize;
-use database::database::{Database, Profile, UserData};
+use std::collections::HashMap;
 
-#[derive(Serialize)]
-struct Player<'a> {
-    username: &'a str,
-    points: u8,
-    ready: bool,
+use bcrypt;
+use database::database::{Database, Profile, UserData};
+use rocket::http::Cookie;
+use rocket::http::Cookies;
+use rocket::request;
+use rocket::request::FlashMessage;
+use rocket::request::Form;
+use rocket::request::FromRequest;
+use rocket::response::{Flash, Redirect};
+use rocket::Outcome;
+use rocket::Request;
+use rocket_contrib::{
+    serve::StaticFiles,
+    templates::{tera::Context, Template},
+};
+
+#[derive(FromForm)]
+struct Login {
+    username: String,
+    password: String,
+}
+
+impl<'a, 'r> FromRequest<'a, 'r> for Profile {
+    type Error = std::convert::Infallible;
+
+    fn from_request(request: &'a Request<'r>) -> request::Outcome<Profile, Self::Error> {
+        let db = Database::open();
+        let id_opt: Option<String> = request
+            .cookies()
+            .get_private("user_id")
+            .and_then(|cookie| cookie.value().parse().ok());
+        let id = match id_opt {
+            Some(x) => x,
+            None => return Outcome::Forward(()),
+        };
+        let profile = db.load_profile(id);
+        match profile {
+            Some(x) => Outcome::Success(x),
+            None => Outcome::Forward(()),
+        }
+    }
 }
 
 #[get("/")]
-fn index(flash: Option<FlashMessage>) -> Template {
-    let username = "test";
-    let points = 10;
-    let ready = false;
-    let player = Player { username, points, ready };
+fn index(profile: Profile, flash: Option<FlashMessage>) -> Template {
     let mut context = Context::new();
     match flash {
         Some(x) => context.insert("message", x.msg()),
         None => {}
     }
-    context.insert("player", &player);
+    context.insert("profile", &profile);
     Template::render("game", &context)
 }
 
-#[get("/flash")]
-fn flash() -> Flash<Redirect> {
-    Flash::success(Redirect::to("/"), "hello world")
+#[get("/", rank = 2)]
+fn index_redir() -> Redirect {
+    Redirect::to("/login")
+}
+
+#[get("/login")]
+fn login_page(flash: Option<FlashMessage>) -> Template {
+    let mut context = Context::new();
+    match flash {
+        Some(x) => context.insert("message", x.msg()),
+        None => {}
+    }
+    Template::render("login", &context)
+}
+
+#[post("/register", data = "<form>")]
+fn register(form: Form<Login>) -> Flash<Redirect> {
+    let db = Database::open();
+    let id: Option<String> = db.get_id(form.username.clone());
+    println!("{:?}", id);
+    match id {
+        Some(_) => return Flash::error(Redirect::to("/login"), "Account already exists"),
+        None => (),
+    };
+    let hash = bcrypt::hash(&form.password, 12).unwrap();
+    let data = UserData::new(form.username.clone(), hash);
+    let profile = Profile::new(db.gen_id().to_string(), data);
+    db.save_profile(profile);
+    Flash::success(Redirect::to("/login"), "Account creation successful")
+}
+
+#[post("/login", data = "<form>")]
+fn login(mut cookies: Cookies, form: Form<Login>) -> Result<Redirect, Flash<Redirect>> {
+    let err = Err(Flash::error(
+        Redirect::to("/login"),
+        "Incorrect username/password",
+    ));
+    let db = Database::open();
+    let id: Option<String> = db.get_id(form.username.clone());
+    let profile: Profile = match id {
+        Some(x) => match db.load_profile(x) {
+            Some(x) => x,
+            None => return err,
+        },
+        None => return err,
+    };
+    let success =
+        bcrypt::verify(&form.password, &profile.data.hash).expect("Failed to verify password");
+    if !success {
+        return err;
+    }
+    cookies.add_private(Cookie::new("user_id", profile.id));
+    Ok(Redirect::to("/"))
+}
+
+#[get("/logout")]
+fn logout(mut cookies: Cookies) -> Redirect {
+    cookies.remove_private(Cookie::named("user_id"));
+    Redirect::to("/")
+}
+
+#[get("/leaderboard")]
+fn leaderboard(profile: Profile) -> Template {
+    let db = Database::open();
+    let mut map: HashMap<String, u16> = HashMap::new();
+    for profile in db.get_profiles() {
+        map.insert(profile.data.username, profile.data.points);
+    }
+    let mut sorted: Vec<(&String, &u16)> = map.iter().collect();
+    sorted.sort_by(|a, b| b.1.cmp(a.1));
+
+    let mut context = Context::new();
+    context.insert("profile", &profile);
+    context.insert("leaderboard", &sorted);
+    println!("{:?}", sorted);
+    Template::render("leaderboard", &context)
 }
 
 fn main() {
-    // rocket::ignite()
-    //     .mount("/", routes![index, flash])
-    //     .mount("/static", StaticFiles::from("./static"))
-    //     .attach(Template::fairing())
-    //     .launch();
-    let username = String::from("pog");
-    let password = "password";
-    let hash = bcrypt::hash(password, 12).unwrap();
-    let points = 0;
-    let data = UserData::new(hash, points);
-    let profile = Profile::new(username.clone(), data);
-
-    println!("{:?}", profile);
-    let db = Database::new();
-    db.save_profile(profile);
-
-    let new_profile = db.load_profile(username);
-    println!("{:?}", new_profile);
+    rocket::ignite()
+        .mount(
+            "/",
+            routes![index, index_redir, login_page, login, register, logout, leaderboard],
+        )
+        .mount("/static", StaticFiles::from("./static"))
+        .attach(Template::fairing())
+        .launch();
 }

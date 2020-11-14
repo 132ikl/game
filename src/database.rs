@@ -1,30 +1,36 @@
 pub mod database {
-    use bincode::{serialize, deserialize};
-    use serde::{Serialize, Deserialize};
-    use sled::{Db, IVec};
+    use bincode::{deserialize, serialize};
+    use serde::{Deserialize, Serialize};
     use sled::open;
+    use sled::{Db, IVec};
 
-    #[derive(Debug)]
+    #[derive(Serialize, Debug)]
     pub struct Profile {
-        username: String,
-        data: UserData
+        pub id: String,
+        pub data: UserData,
     }
 
     impl Profile {
-        pub fn new(username: String, data: UserData) -> Profile {
-            Profile { username, data }
+        pub fn new(id: String, data: UserData) -> Profile {
+            Profile { id, data }
         }
     }
 
     #[derive(Serialize, Deserialize, Debug)]
     pub struct UserData {
-        hash: String,
-        points: u16
+        pub username: String,
+        pub hash: String,
+        pub points: u16,
     }
 
     impl UserData {
-        pub fn new(hash: String, points: u16) -> UserData {
-            UserData { hash, points }
+        pub fn new(username: String, hash: String) -> UserData {
+            let points = 0;
+            UserData {
+                username,
+                hash,
+                points,
+            }
         }
     }
 
@@ -44,24 +50,58 @@ pub mod database {
     }
 
     pub struct Database {
-        db: Db
+        db: Db,
     }
 
     impl Database {
-        pub fn new() -> Database {
+        pub fn open() -> Database {
             let path = "database";
             let db = open(path).expect("Unable to access database");
             Database { db }
         }
 
         pub fn save_profile(&self, profile: Profile) {
-            self.db.insert(profile.username, profile.data).expect("Failed to insert");
+            self.db
+                .insert(profile.id, profile.data)
+                .expect("Failed to insert");
         }
 
-        pub fn load_profile(&self, username: String) -> Profile {
-            let vec: IVec = self.db.get(&username).unwrap().unwrap();
+        pub fn load_profile(&self, id: String) -> Option<Profile> {
+            let vec: IVec = self.db.get(&id).unwrap()?;
             let data: UserData = vec.into();
-            Profile { username, data }
+            Some(Profile { id, data })
+        }
+
+        pub fn get_profiles(&self) -> Vec<Profile> {
+            let mut profiles: Vec<Profile> = Vec::new();
+            for item in self.db.iter() {
+                // TODO: make less ugly
+                profiles.push(match item.ok() {
+                    Some(x) => {
+                        let id: String = match std::str::from_utf8(&x.0.to_vec()).ok() {
+                            Some(x) => x.to_owned(),
+                            None => continue,
+                        };
+                        let data: UserData = x.1.into();
+                        Profile { id, data }
+                    }
+                    None => continue,
+                });
+            }
+            profiles
+        }
+
+        pub fn get_id(&self, username: String) -> Option<String> {
+            for profile in self.get_profiles() {
+                if profile.data.username == username {
+                    return Some(profile.id);
+                }
+            }
+            None
+        }
+
+        pub fn gen_id(&self) -> u64 {
+            self.db.generate_id().unwrap()
         }
     }
 }

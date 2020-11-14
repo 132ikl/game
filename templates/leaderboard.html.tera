@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "base" %}
 
 {% block content %}
 <div class="col mid mid-v">
     <p>leaderboard</p>
     <ol>
-    {% for user, points in users.items() %}
-    <li>{{ user }} - {{ points[1] }}</li>
+    {% for user in leaderboard %}
+    <li>{{ user[0] }} - {{ user[1] }}</li>
     {% endfor %}
     </ol>
 </div>
