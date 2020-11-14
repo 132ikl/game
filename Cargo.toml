@@ -10,6 +10,7 @@ bincode = "^1.1.4"
 chrono = "^0.4.19"
 json = "^0.12.4"
 rocket = "^0.4.6"
+serde_repr = "^0.1.6"
 sled = "^0.34"
 
 [dependencies.serde]

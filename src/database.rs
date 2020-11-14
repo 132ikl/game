@@ -1,6 +1,9 @@
 pub mod database {
+    use std::str::from_utf8;
+
     use bincode::{deserialize, serialize};
     use serde::{Deserialize, Serialize};
+    use serde_repr::{Deserialize_repr, Serialize_repr};
     use sled::open;
     use sled::{Db, IVec};
 
@@ -23,6 +26,7 @@ pub mod database {
         pub points: u16,
         pub next: i64,
         pub ready: bool,
+        pub items: Vec<ShopItem>
     }
 
     impl UserData {
@@ -33,6 +37,7 @@ pub mod database {
                 points: 0,
                 next: 0,
                 ready: true,
+                items: Vec::new()
             }
         }
     }
@@ -50,6 +55,14 @@ pub mod database {
             let vec: Vec<u8> = serialize(&data).expect("Failed to serialize user data");
             IVec::from(vec)
         }
+    }
+
+    #[derive(Serialize_repr, Deserialize_repr, Clone, Debug)]
+    #[repr(u8)]
+    pub enum ShopItem {
+        One = 1,
+        Two = 2,
+        Three = 3,
     }
 
     pub struct Database {
@@ -78,10 +91,10 @@ pub mod database {
         pub fn get_profiles(&self) -> Vec<Profile> {
             let mut profiles: Vec<Profile> = Vec::new();
             for item in self.db.iter() {
-                // TODO: make less ugly
                 profiles.push(match item.ok() {
                     Some(x) => {
-                        let id: String = match std::str::from_utf8(&x.0.to_vec()).ok() {
+                        let vec: Vec<u8> = x.0.to_vec();
+                        let id: String = match from_utf8(&vec).ok() {
                             Some(x) => x.to_owned(),
                             None => continue,
                         };
