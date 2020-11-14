@@ -5,7 +5,7 @@ extern crate rocket;
 mod database;
 
 use bcrypt;
-use database::database::{Database, Profile, UserData};
+use database::{Database, Profile, UserData};
 use rocket::http::Cookie;
 use rocket::http::Cookies;
 use rocket::request;
