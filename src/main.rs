@@ -4,8 +4,6 @@ extern crate rocket;
 
 mod database;
 
-use std::collections::HashMap;
-
 use bcrypt;
 use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use database::database::{Database, Profile, UserData};
@@ -52,21 +50,17 @@ impl<'a, 'r> FromRequest<'a, 'r> for Profile {
 
 #[get("/")]
 fn index(profile: Profile, flash: Option<FlashMessage>) -> Template {
-    println!("{:?}", &profile);
     let mut context = Context::new();
-    match flash {
-        Some(x) => context.insert("message", x.msg()),
-        None => {}
+    if let Some(x) = flash {
+        context.insert("message", x.msg());
     }
     match update_profile(profile.clone()) {
         Ok(new) => context.insert("profile", &new),
         Err((new, msg)) => {
             context.insert("profile", &new);
-            println!("{:?}", &msg);
             context.insert("message", &msg);
         }
     };
-    println!("{:?}", context);
     Template::render("game", &context)
 }
 
@@ -121,11 +115,9 @@ fn login_page(flash: Option<FlashMessage>) -> Template {
 fn register(form: Form<Login>) -> Flash<Redirect> {
     let db = Database::open();
     let id: Option<String> = db.get_id(form.username.clone());
-    println!("{:?}", id);
-    match id {
-        Some(_) => return Flash::error(Redirect::to("/login"), "Account already exists"),
-        None => (),
-    };
+    if id.is_some() {
+        return Flash::error(Redirect::to("/login"), "Account already exists");
+    }
     let hash = bcrypt::hash(&form.password, 4).unwrap();
     let data = UserData::new(form.username.clone(), hash);
     let profile = Profile::new(db.gen_id().to_string(), data);
@@ -166,17 +158,16 @@ fn logout(mut cookies: Cookies) -> Redirect {
 #[get("/leaderboard")]
 fn leaderboard(profile: Profile) -> Template {
     let db = Database::open();
-    let mut map: HashMap<String, u16> = HashMap::new();
-    for profile in db.get_profiles() {
-        map.insert(profile.data.username, profile.data.points);
-    }
-    let mut sorted: Vec<(&String, &u16)> = map.iter().collect();
-    sorted.sort_by(|a, b| b.1.cmp(a.1));
+    let mut sorted: Vec<_> = db
+        .get_profiles()
+        .into_iter()
+        .map(|profile| (profile.data.username, profile.data.points))
+        .collect();
+    sorted.sort_by(|a, b| b.1.cmp(&a.1));
 
     let mut context = Context::new();
     context.insert("profile", &profile);
     context.insert("leaderboard", &sorted);
-    println!("{:?}", sorted);
     Template::render("leaderboard", &context)
 }
 
