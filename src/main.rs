@@ -5,7 +5,6 @@ extern crate rocket;
 mod database;
 
 use bcrypt;
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use database::database::{Database, Profile, UserData};
 use rocket::http::Cookie;
 use rocket::http::Cookies;
@@ -49,18 +48,15 @@ impl<'a, 'r> FromRequest<'a, 'r> for Profile {
 }
 
 #[get("/")]
-fn index(profile: Profile, flash: Option<FlashMessage>) -> Template {
+fn index(mut profile: Profile, flash: Option<FlashMessage>) -> Template {
     let mut context = Context::new();
     if let Some(x) = flash {
         context.insert("message", x.msg());
     }
-    match update_profile(profile.clone()) {
-        Ok(new) => context.insert("profile", &new),
-        Err((new, msg)) => {
-            context.insert("profile", &new);
-            context.insert("message", &msg);
-        }
-    };
+    if let Some(msg) = profile.update() {
+        context.insert("message", &msg);
+    }
+    context.insert("profile", &profile);
     Template::render("game", &context)
 }
 
@@ -69,35 +65,16 @@ fn index_redir() -> Redirect {
     Redirect::to("/login")
 }
 
-fn update_profile(profile: Profile) -> Result<Profile, (Profile, String)> {
-    let mut profile = profile.clone();
-    let next = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(profile.data.next, 0), Utc);
-    let now: DateTime<Utc> = Utc::now();
-    if now > next {
-        let next = (now + Duration::days(1)).timestamp();
-        profile.data.next = next;
-        profile.data.ready = true;
-        return Ok(profile);
-    } else {
-        profile.data.ready = false;
-        let secs = (next - now).num_seconds();
-        let h = secs / 3600;
-        let rem = secs % 3600;
-        let m = rem / 60;
-        return Err((profile, format!("come back in {}h {}m to get again", h, m)));
-    }
-}
 
 #[get("/get")]
-fn get(profile: Profile) -> Redirect {
+fn get(mut profile: Profile) -> Redirect {
     let rd = Redirect::to("/");
-    let mut new_profile: Profile = match update_profile(profile) {
-        Ok(profile) => profile,
-        Err(_) => return rd,
+    if profile.update().is_some() {
+        return rd
     };
-    new_profile.data.points = new_profile.data.points + 1;
+    profile.data.points = profile.data.points + 1;
     let db = Database::open();
-    db.save_profile(new_profile);
+    db.save_profile(profile);
     rd
 }
 
