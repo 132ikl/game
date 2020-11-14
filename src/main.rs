@@ -3,9 +3,11 @@
 extern crate rocket;
 
 mod database;
+mod profile;
 
 use bcrypt;
-use database::{Database, Profile, UserData};
+use database::Database;
+use profile::{Profile, UserData};
 use rocket::http::Cookie;
 use rocket::http::Cookies;
 use rocket::request;
