@@ -2,14 +2,17 @@
 
 {% block content %}
 <div class="col mid mid-v">
-    {% if profile %}
-        <p>press button to get</p>
+    {% if message %}
+        {{ message }}
     {% else %}
-        {% if message %}
-            {{ message }}
-        {% endif %}
+        <p>press button to get</p>
     {% endif %}
-    <form class="login" action="/" method="POST">
+    <form class="login" action="/get">
+        {% if profile.data.ready %}
+        <input type="submit" value="get">
+        {% else %}
+        <input type="submit" value="get" disabled>
+        {% endif %}
     </form>
 </div>
 {% endblock %}

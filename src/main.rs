@@ -7,6 +7,7 @@ mod database;
 use std::collections::HashMap;
 
 use bcrypt;
+use chrono::{DateTime, Duration, NaiveDateTime, Utc};
 use database::database::{Database, Profile, UserData};
 use rocket::http::Cookie;
 use rocket::http::Cookies;
@@ -51,18 +52,59 @@ impl<'a, 'r> FromRequest<'a, 'r> for Profile {
 
 #[get("/")]
 fn index(profile: Profile, flash: Option<FlashMessage>) -> Template {
+    println!("{:?}", &profile);
     let mut context = Context::new();
     match flash {
         Some(x) => context.insert("message", x.msg()),
         None => {}
     }
-    context.insert("profile", &profile);
+    match update_profile(profile.clone()) {
+        Ok(new) => context.insert("profile", &new),
+        Err((new, msg)) => {
+            context.insert("profile", &new);
+            println!("{:?}", &msg);
+            context.insert("message", &msg);
+        }
+    };
+    println!("{:?}", context);
     Template::render("game", &context)
 }
 
 #[get("/", rank = 2)]
 fn index_redir() -> Redirect {
     Redirect::to("/login")
+}
+
+fn update_profile(profile: Profile) -> Result<Profile, (Profile, String)> {
+    let mut profile = profile.clone();
+    let next = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(profile.data.next, 0), Utc);
+    let now: DateTime<Utc> = Utc::now();
+    if now > next {
+        let next = (now + Duration::days(1)).timestamp();
+        profile.data.next = next;
+        profile.data.ready = true;
+        return Ok(profile);
+    } else {
+        profile.data.ready = false;
+        let secs = (next - now).num_seconds();
+        let h = secs / 3600;
+        let rem = secs % 3600;
+        let m = rem / 60;
+        return Err((profile, format!("come back in {}h {}m to get again", h, m)));
+    }
+}
+
+#[get("/get")]
+fn get(profile: Profile) -> Redirect {
+    let rd = Redirect::to("/");
+    let mut new_profile: Profile = match update_profile(profile) {
+        Ok(profile) => profile,
+        Err(_) => return rd,
+    };
+    new_profile.data.points = new_profile.data.points + 1;
+    let db = Database::open();
+    db.save_profile(new_profile);
+    rd
 }
 
 #[get("/login")]
@@ -84,7 +126,7 @@ fn register(form: Form<Login>) -> Flash<Redirect> {
         Some(_) => return Flash::error(Redirect::to("/login"), "Account already exists"),
         None => (),
     };
-    let hash = bcrypt::hash(&form.password, 12).unwrap();
+    let hash = bcrypt::hash(&form.password, 4).unwrap();
     let data = UserData::new(form.username.clone(), hash);
     let profile = Profile::new(db.gen_id().to_string(), data);
     db.save_profile(profile);
@@ -142,7 +184,16 @@ fn main() {
     rocket::ignite()
         .mount(
             "/",
-            routes![index, index_redir, login_page, login, register, logout, leaderboard],
+            routes![
+                index,
+                index_redir,
+                login_page,
+                login,
+                register,
+                logout,
+                leaderboard,
+                get
+            ],
         )
         .mount("/static", StaticFiles::from("./static"))
         .attach(Template::fairing())

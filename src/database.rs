@@ -4,7 +4,7 @@ pub mod database {
     use sled::open;
     use sled::{Db, IVec};
 
-    #[derive(Serialize, Debug)]
+    #[derive(Serialize, Clone, Debug)]
     pub struct Profile {
         pub id: String,
         pub data: UserData,
@@ -16,20 +16,23 @@ pub mod database {
         }
     }
 
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Serialize, Deserialize, Clone, Debug)]
     pub struct UserData {
         pub username: String,
         pub hash: String,
         pub points: u16,
+        pub next: i64,
+        pub ready: bool,
     }
 
     impl UserData {
         pub fn new(username: String, hash: String) -> UserData {
-            let points = 0;
             UserData {
                 username,
                 hash,
-                points,
+                points: 0,
+                next: 0,
+                ready: true,
             }
         }
     }
