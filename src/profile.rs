@@ -1,9 +1,5 @@
-use std::fmt;
-
 use bincode::{deserialize, serialize};
-use chrono::{DateTime, Duration, NaiveDateTime, Utc};
-use serde::de;
-use serde::de::Visitor;
+use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use sled::IVec;
@@ -20,9 +16,9 @@ impl Profile {
     }
 
     pub fn update(&mut self) -> Option<String> {
-        let next = self.data.next.time;
+        let next = self.data.next;
         if Utc::now() > next {
-            self.data.next.time = Utc::now() + Duration::days(1);
+            self.data.next = Utc::now() + Duration::days(1);
             self.data.ready = true;
             return None;
         } else {
@@ -41,7 +37,7 @@ pub struct UserData {
     pub username: String,
     pub hash: String,
     pub points: u16,
-    pub next: TimeWrap,
+    pub next: DateTime<Utc>,
     pub ready: bool,
     pub items: Vec<ShopItem>,
 }
@@ -52,59 +48,10 @@ impl UserData {
             username,
             hash,
             points: 0,
-            next: TimeWrap::new(),
+            next: Utc::now(),
             ready: true,
             items: Vec::new(),
         }
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct TimeWrap {
-    pub time: DateTime<Utc>
-}
-
-impl TimeWrap {
-    pub fn new() -> TimeWrap {
-        TimeWrap {
-            time: Utc::now()
-        }
-    }
-}
-
-impl Serialize for TimeWrap {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer {
-        let time: i64 = self.time.timestamp();
-        serializer.serialize_i64(time)
-    }
-}
-
-struct TimeWrapVisitor;
-
-impl<'de> Visitor<'de> for TimeWrapVisitor {
-    type Value = TimeWrap;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a unix timestamp integer")
-    }
-
-    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        let time = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(value, 0), Utc);
-        Ok(TimeWrap { time })
-    }
-
-}
-
-impl<'de> Deserialize<'de> for TimeWrap {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de> {
-        deserializer.deserialize_i64(TimeWrapVisitor)
     }
 }
 
