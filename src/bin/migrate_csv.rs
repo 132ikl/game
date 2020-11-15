@@ -1,11 +1,11 @@
 use std::error::Error;
 
+use button_game::data::{Profile, ShopItem, UserData};
+use button_game::database::Database;
 use chrono::DateTime;
 use chrono::NaiveDateTime;
 use chrono::Utc;
 use csv::ReaderBuilder;
-use game::data::{Profile, ShopItem, UserData};
-use game::database::Database;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]

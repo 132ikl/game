@@ -1,5 +1,5 @@
 [package]
-name = "game"
+name = "button-game"
 version = "1.0.0"
 authors = ["132ikl <132@ikl.sh>"]
 description = "eccentric skinner box point-collecting game"

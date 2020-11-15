@@ -1,5 +1,5 @@
+use button_game::database::Database;
 use chrono::Utc;
-use game::database::Database;
 
 fn main() {
     let db = Database::open();
