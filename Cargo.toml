@@ -1,7 +1,10 @@
 [package]
 name = "game"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["132ikl <132@ikl.sh>"]
+description = "eccentric skinner box point-collecting game"
+license-file = "LICENSE"
+repository = "https://github.com/132ikl/game"
 edition = "2018"
 
 [dependencies]
