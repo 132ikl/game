@@ -87,17 +87,15 @@ impl From<UserData> for IVec {
 )]
 #[repr(u8)]
 pub enum ShopItem {
-    OneItem = 1,
-    Two = 2,
-    Three = 3,
+    DarkMode = 1,
+    GayButton = 2,
 }
 
 impl ShopItem {
     pub fn get_prices() -> HashMap<ShopItem, u16> {
         let mut prices: HashMap<ShopItem, u16> = HashMap::new();
-        prices.insert(ShopItem::OneItem, 1);
-        prices.insert(ShopItem::Two, 2);
-        prices.insert(ShopItem::Three, 2);
+        prices.insert(ShopItem::DarkMode, 3);
+        prices.insert(ShopItem::GayButton, 10);
         prices
     }
 

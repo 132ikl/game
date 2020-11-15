@@ -9,9 +9,9 @@
     {% endif %}
     <form class="login" action="/get">
         {% if profile.data.ready %}
-        <input type="submit" value="get">
+        <input id="the-button" type="submit" value="get">
         {% else %}
-        <input type="submit" value="get" disabled>
+        <input id="the-button" type="submit" value="get" disabled>
         {% endif %}
     </form>
 </div>

@@ -4,7 +4,12 @@
         <title>game</title>
         <link rel="shortcut icon" href="static/favicon.ico" />
         <link rel="stylesheet" href="static/styles.css" />
+        {% if DarkMode %}
+        <link rel="stylesheet" href="static/dark.css" />
+        {% endif %}
+        {% if GayButton %}
         <link rel="stylesheet" href="static/gay.css" />
+        {% endif %}
     </head>
     <body>
         {% block min_content %}{% endblock %}

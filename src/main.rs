@@ -34,6 +34,16 @@ struct BuyForm {
     pub item: ShopItem,
 }
 
+fn get_context(profile: &Profile) -> Context {
+    let mut context = Context::new();
+    context.insert("profile", &profile);
+    profile
+        .owned_items()
+        .iter()
+        .for_each(|(k, v)| context.insert(k, v));
+    context
+}
+
 impl<'a, 'r> FromRequest<'a, 'r> for Profile {
     type Error = std::convert::Infallible;
 
@@ -51,7 +61,7 @@ impl<'a, 'r> FromRequest<'a, 'r> for Profile {
 
 #[get("/")]
 fn index(mut profile: Profile, flash: Option<FlashMessage>) -> Template {
-    let mut context = Context::new();
+    let mut context = get_context(&profile);
 
     // if profile.update() returns Some(msg), early exit, else get Option<msg> from flash
     if let Some(msg) = profile
@@ -61,8 +71,7 @@ fn index(mut profile: Profile, flash: Option<FlashMessage>) -> Template {
     {
         context.insert("message", msg);
     }
-
-    context.insert("profile", &profile);
+    context.insert("profile", &profile); // overwrite old profile with newly ready-set profile
     Template::render("game", &context)
 }
 
@@ -150,16 +159,14 @@ fn leaderboard(profile: Profile) -> Template {
         .collect();
     sorted.sort_by(|a, b| b.1.cmp(&a.1));
 
-    let mut context = Context::new();
-    context.insert("profile", &profile);
+    let mut context = get_context(&profile);
     context.insert("leaderboard", &sorted);
     Template::render("leaderboard", &context)
 }
 
 #[get("/shop")]
 fn shop(profile: Profile) -> Template {
-    let mut context = Context::new();
-    context.insert("profile", &profile);
+    let mut context = get_context(&profile);
     context.insert("shop", &ShopItem::get_display_prices(profile));
     Template::render("shop", &context)
 }
