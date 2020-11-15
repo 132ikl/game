@@ -107,7 +107,7 @@ impl ShopItem {
                 (
                     k.to_string(),
                     camel_to_lowerspace(&k.to_string()),
-                    *v,
+                    ShopItem::price_with_sell(*v, &profile, k),
                     profile.data.items.contains(k),
                 )
             })
@@ -117,12 +117,25 @@ impl ShopItem {
         prices
     }
 
-    pub fn get_price(item: &ShopItem) -> Option<u16> {
-        Some(*ShopItem::get_prices().get(&item)?)
+    pub fn get_price(profile: &Profile, item: &ShopItem) -> Option<u16> {
+        Some(ShopItem::price_with_sell(
+            *ShopItem::get_prices().get(&item)?,
+            profile,
+            item,
+        ))
+    }
+
+    fn price_with_sell(price: u16, profile: &Profile, item: &ShopItem) -> u16 {
+        if profile.data.items.contains(item) {
+            ((price as f32) * 0.8) as u16
+        } else {
+            price
+        }
     }
 }
 
-impl fmt::Display for ShopItem { // for to_string
+impl fmt::Display for ShopItem {
+    // for to_string
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }

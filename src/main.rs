@@ -174,7 +174,7 @@ fn shop(profile: Profile) -> Template {
 #[post("/buy", data = "<form>")]
 fn buy(mut profile: Profile, form: Form<BuyForm>) -> Result<Redirect, Redirect> {
     let r = || Redirect::to("/shop");
-    let price = ShopItem::get_price(&form.item).ok_or(r())?;
+    let price = ShopItem::get_price(&profile, &form.item).ok_or(r())?;
     if profile.data.items.contains(&form.item) {
         // sell if already owned
         profile.data.points += price;
