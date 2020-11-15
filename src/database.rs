@@ -1,4 +1,4 @@
-use crate::profile::{Profile, UserData};
+use crate::data::{Profile, UserData};
 
 use sled::open;
 use sled::{Db, IVec};

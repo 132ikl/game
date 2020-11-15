@@ -5,7 +5,7 @@
     <p>leaderboard</p>
     <ol>
     {% for user in leaderboard %}
-    <li>{{ user[0] }} - {{ user[1] }}</li>
+    <li>{{ user.0 }} - {{ user.1 }}</li>
     {% endfor %}
     </ol>
 </div>

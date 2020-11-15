@@ -2,12 +2,12 @@
 #[macro_use]
 extern crate rocket;
 
+mod data;
 mod database;
-mod profile;
 
 use bcrypt;
+use data::{Profile, ShopItem, UserData};
 use database::Database;
-use profile::{Profile, UserData};
 use rocket::http::Cookie;
 use rocket::http::Cookies;
 use rocket::request;
@@ -26,6 +26,12 @@ use rocket_contrib::{
 struct Login {
     username: String,
     password: String,
+}
+
+#[derive(FromForm, Debug)]
+struct BuyForm {
+    pub buy: bool,
+    pub item: ShopItem,
 }
 
 impl<'a, 'r> FromRequest<'a, 'r> for Profile {
@@ -150,6 +156,33 @@ fn leaderboard(profile: Profile) -> Template {
     Template::render("leaderboard", &context)
 }
 
+#[get("/shop")]
+fn shop(profile: Profile) -> Template {
+    let mut context = Context::new();
+    context.insert("profile", &profile);
+    context.insert("shop", &ShopItem::get_display_prices(profile));
+    Template::render("shop", &context)
+}
+
+#[post("/buy", data = "<form>")]
+fn buy(mut profile: Profile, form: Form<BuyForm>) -> Result<Redirect, Redirect> {
+    let r = || Redirect::to("/shop");
+    let price = ShopItem::get_price(&form.item).ok_or(r())?;
+    if profile.data.items.contains(&form.item) {
+        // sell if already owned
+        profile.data.points += price;
+        profile.data.items.retain(|x| x != &form.item);
+    } else {
+        if profile.data.points >= price {
+            profile.data.points -= price;
+            profile.data.items.push(form.item);
+        }
+    }
+    println!("{:?}", profile.data.items);
+    Database::open().save_profile(profile);
+    Ok(r())
+}
+
 fn main() {
     rocket::ignite()
         .mount(
@@ -162,7 +195,9 @@ fn main() {
                 register,
                 logout,
                 leaderboard,
-                get
+                shop,
+                get,
+                buy
             ],
         )
         .mount("/static", StaticFiles::from("./static"))

@@ -1,0 +1,27 @@
+{% extends "base" %}
+
+{% block content %}
+<div class="col mid">
+<p>welcome to shop</p>
+</div>
+<div class="col left">
+    <form action="/buy" method="POST">
+    {% for item in shop %}
+    <div class="item">
+        <p>{{ item.1 }} - {{ item.2 }}
+        </p>
+        {% if item.3 %}
+        <button type="submit" name="item" value="{{ item.0 }}">sell</button>
+        {% else %}
+        {% if profile.data.points < item.2 %}
+        <button type="submit" name="item" value="{{ item.0 }}" disabled>buy</button>
+        {% else %}
+        <button type="submit" name="item" value="{{ item.0 }}">buy</button>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
+    </form>
+    </ol>
+</div>
+{% endblock %}
