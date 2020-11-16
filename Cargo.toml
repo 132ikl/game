@@ -1,6 +1,6 @@
 [package]
 name = "button-game"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["132ikl <132@ikl.sh>"]
 description = "eccentric skinner box point-collecting game"
 license-file = "LICENSE"
