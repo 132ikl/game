@@ -1,13 +1,21 @@
-#![feature(proc_macro_hygiene, decl_macro)]
+#![feature(proc_macro_hygiene, decl_macro, try_trait)]
 #[macro_use]
 extern crate rocket;
 
 mod data;
 mod database;
 
+use std::borrow::Cow;
+use std::fs::File;
+use std::io::Write;
+use std::option::NoneError;
+use std::path::PathBuf;
+
 use bcrypt;
 use data::{Profile, ShopItem, UserData};
 use database::Database;
+use rocket::Config;
+use rocket::config::Environment;
 use rocket::http::Cookie;
 use rocket::http::Cookies;
 use rocket::request;
@@ -17,10 +25,10 @@ use rocket::request::FromRequest;
 use rocket::response::{Flash, Redirect};
 use rocket::Outcome;
 use rocket::Request;
-use rocket_contrib::{
-    serve::StaticFiles,
-    templates::{tera::Context, Template},
-};
+use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::templates::{tera::Context, Template};
+use rust_embed::RustEmbed;
+use tempfile::TempDir;
 
 #[derive(FromForm)]
 struct Login {
@@ -185,13 +193,42 @@ fn buy(mut profile: Profile, form: Form<BuyForm>) -> Result<Redirect, Redirect> 
             profile.data.items.push(form.item);
         }
     }
-    println!("{:?}", profile.data.items);
     Database::open().save_profile(profile);
     Ok(r())
 }
 
-fn main() {
-    rocket::ignite()
+#[derive(RustEmbed)]
+#[folder = "static/"]
+struct Static;
+
+#[derive(RustEmbed)]
+#[folder = "templates/"]
+struct Templates;
+
+fn extract_embedded<A: RustEmbed>(_: A) -> Option<TempDir> {
+    let dir: TempDir = TempDir::new().ok()?;
+    let dir_path = dir.path();
+    for filename in A::iter() {
+        let name: &str = &*filename;
+        let path: PathBuf = dir_path.join(name);
+        let data: Cow<[u8]> = A::get(&name)?;
+        let mut file = File::create(path).ok()?;
+        file.write_all(&data).ok();
+    }
+    Some(dir)
+}
+
+fn main() -> Result<(), NoneError> {
+    let static_dir: TempDir = extract_embedded(Static)?;
+    let static_path: String = static_dir.into_path().to_str()?.to_owned();
+    let template_dir: TempDir = extract_embedded(Templates)?;
+    let template_path: String = template_dir.into_path().to_str()?.to_owned();
+
+    let config = Config::build(Environment::Staging)
+        .extra("template_dir", template_path)
+        .finalize().ok()?;
+
+    rocket::custom(config)
         .mount(
             "/",
             routes![
@@ -204,10 +241,11 @@ fn main() {
                 leaderboard,
                 shop,
                 get,
-                buy
+                buy,
             ],
         )
-        .mount("/static", StaticFiles::from("./static"))
+        .mount("/static", StaticFiles::from(static_path))
         .attach(Template::fairing())
         .launch();
+    Ok(())
 }
