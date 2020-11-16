@@ -1,9 +1,9 @@
 [package]
 name = "button-game"
-version = "1.0.3"
+version = "1.0.4"
 authors = ["132ikl <132@ikl.sh>"]
 description = "eccentric skinner box point-collecting game"
-license-file = "LICENSE"
+license = "AGPL-3.0"
 repository = "https://github.com/132ikl/game"
 edition = "2018"
 
