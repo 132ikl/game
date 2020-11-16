@@ -1,6 +1,7 @@
 #![feature(proc_macro_hygiene, decl_macro, try_trait)]
 #[macro_use]
 extern crate rocket;
+extern crate rocket_contrib;
 
 mod data;
 mod database;
@@ -20,7 +21,6 @@ use rocket::config::ConfigError;
 use rocket::config::Environment;
 use rocket::config::LoggingLevel;
 use rocket::config::RocketConfig;
-use rocket::config::Value;
 use rocket::http::Cookie;
 use rocket::http::Cookies;
 use rocket::logger;
@@ -33,8 +33,12 @@ use rocket::Config;
 use rocket::Outcome;
 use rocket::Request;
 use rocket_contrib::serve::StaticFiles;
+use rocket_contrib::templates::tera;
+use rocket_contrib::templates::tera::try_get_value;
+use rocket_contrib::templates::Engines;
 use rocket_contrib::templates::{tera::Context, Template};
 use rust_embed::RustEmbed;
+use serde_json::value::{to_value, Value};
 use tempfile::TempDir;
 
 #[derive(FromForm)]
@@ -225,6 +229,29 @@ fn extract_embedded<A: RustEmbed>(_: A) -> Option<TempDir> {
     Some(dir)
 }
 
+fn lowerspace(value: Value, _: HashMap<String, Value>) -> tera::Result<Value> {
+    let s = try_get_value!("lowerspace", "value", String, value);
+
+    Ok(to_value(
+        s.chars()
+            .into_iter()
+            .map(|x| {
+                if x.is_uppercase() {
+                    format!(" {}", &x.to_string().to_lowercase())
+                } else {
+                    x.to_string()
+                }
+            })
+            .collect::<String>()
+            .trim_start()
+            .to_string(),
+    )?)
+}
+
+fn register_engines(engines: &mut Engines) {
+    engines.tera.register_filter("lowerspace", lowerspace);
+}
+
 fn main() -> Result<(), NoneError> {
     let static_dir: TempDir = extract_embedded(Static)?;
     let static_path: String = static_dir.into_path().to_str()?.to_owned();
@@ -237,11 +264,10 @@ fn main() -> Result<(), NoneError> {
         e.pretty_print();
         process::exit(1)
     };
-    let rc = RocketConfig::read().unwrap_or_else(|_| {
-        RocketConfig::active_default().unwrap_or_else(|e| bail(e))
-    });
+    let rc = RocketConfig::read()
+        .unwrap_or_else(|_| RocketConfig::active_default().unwrap_or_else(|e| bail(e)));
     let mut config: Config = rc.get(Environment::Production).clone();
-    let mut extras: HashMap<String, Value> = HashMap::new();
+    let mut extras: HashMap<String, rocket::config::Value> = HashMap::new();
     extras.insert("template_dir".into(), template_path.into());
     config.set_extras(extras);
 
@@ -262,7 +288,7 @@ fn main() -> Result<(), NoneError> {
             ],
         )
         .mount("/static", StaticFiles::from(static_path))
-        .attach(Template::fairing())
+        .attach(Template::custom(register_engines))
         .launch();
     Ok(())
 }

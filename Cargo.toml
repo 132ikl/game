@@ -16,6 +16,7 @@ rocket = "0.4.6"
 serde_repr = "0.1.6"
 sled = "0.34.6"
 tempfile = "3.1.0"
+serde_json = "1.0.59"
 
 [dependencies.rust-embed]
 version = "5.6.0"

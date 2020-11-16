@@ -99,21 +99,20 @@ impl ShopItem {
         prices
     }
 
-    pub fn get_display_prices(profile: Profile) -> Vec<(String, String, u16, bool)> {
+    pub fn get_display_prices(profile: Profile) -> Vec<(String, u16, bool)> {
         // real name, display name, price, been purchased
         let mut prices = ShopItem::get_prices()
             .iter()
             .map(|(k, v)| {
                 (
                     k.to_string(),
-                    camel_to_lowerspace(&k.to_string()),
                     ShopItem::price_with_sell(*v, &profile, k),
                     profile.data.items.contains(k),
                 )
             })
-            .collect::<Vec<(String, String, u16, bool)>>();
+            .collect::<Vec<(String, u16, bool)>>();
         prices.sort_by(|a, b| a.0.cmp(&b.0)); // sort alphabetically, then by price
-        prices.sort_by(|a, b| a.2.cmp(&b.2)); // ensures constant order even for same price items
+        prices.sort_by(|a, b| a.1.cmp(&b.1)); // ensures constant order even for same price items
         prices
     }
 
@@ -139,19 +138,4 @@ impl fmt::Display for ShopItem {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self)
     }
-}
-
-fn camel_to_lowerspace(item: &str) -> String {
-    item.chars()
-        .into_iter()
-        .map(|x| {
-            if x.is_uppercase() {
-                format!(" {}", &x.to_string().to_lowercase())
-            } else {
-                x.to_string()
-            }
-        })
-        .collect::<String>()
-        .trim_start()
-        .to_string()
 }
