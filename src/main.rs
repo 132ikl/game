@@ -6,6 +6,7 @@ mod data;
 mod database;
 
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
 use std::option::NoneError;
@@ -14,8 +15,9 @@ use std::path::PathBuf;
 use bcrypt;
 use data::{Profile, ShopItem, UserData};
 use database::Database;
-use rocket::Config;
 use rocket::config::Environment;
+use rocket::config::RocketConfig;
+use rocket::config::Value;
 use rocket::http::Cookie;
 use rocket::http::Cookies;
 use rocket::request;
@@ -23,6 +25,7 @@ use rocket::request::FlashMessage;
 use rocket::request::Form;
 use rocket::request::FromRequest;
 use rocket::response::{Flash, Redirect};
+use rocket::Config;
 use rocket::Outcome;
 use rocket::Request;
 use rocket_contrib::serve::StaticFiles;
@@ -224,9 +227,11 @@ fn main() -> Result<(), NoneError> {
     let template_dir: TempDir = extract_embedded(Templates)?;
     let template_path: String = template_dir.into_path().to_str()?.to_owned();
 
-    let config = Config::build(Environment::Staging)
-        .extra("template_dir", template_path)
-        .finalize().ok()?;
+    let rc = RocketConfig::read().unwrap();
+    let mut config: Config = rc.get(Environment::Production).clone();
+    let mut extras: HashMap<String, Value> = HashMap::new();
+    extras.insert("template_dir".into(), template_path.into());
+    config.set_extras(extras);
 
     rocket::custom(config)
         .mount(
