@@ -11,15 +11,19 @@ use std::fs::File;
 use std::io::Write;
 use std::option::NoneError;
 use std::path::PathBuf;
+use std::process;
 
 use bcrypt;
 use data::{Profile, ShopItem, UserData};
 use database::Database;
+use rocket::config::ConfigError;
 use rocket::config::Environment;
+use rocket::config::LoggingLevel;
 use rocket::config::RocketConfig;
 use rocket::config::Value;
 use rocket::http::Cookie;
 use rocket::http::Cookies;
+use rocket::logger;
 use rocket::request;
 use rocket::request::FlashMessage;
 use rocket::request::Form;
@@ -227,7 +231,15 @@ fn main() -> Result<(), NoneError> {
     let template_dir: TempDir = extract_embedded(Templates)?;
     let template_path: String = template_dir.into_path().to_str()?.to_owned();
 
-    let rc = RocketConfig::read().unwrap();
+    // from rocket src
+    let bail = |e: ConfigError| -> ! {
+        logger::init(LoggingLevel::Debug);
+        e.pretty_print();
+        process::exit(1)
+    };
+    let rc = RocketConfig::read().unwrap_or_else(|_| {
+        RocketConfig::active_default().unwrap_or_else(|e| bail(e))
+    });
     let mut config: Config = rc.get(Environment::Production).clone();
     let mut extras: HashMap<String, Value> = HashMap::new();
     extras.insert("template_dir".into(), template_path.into());
