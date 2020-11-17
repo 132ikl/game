@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let id = db.gen_id();
         let profile = Profile::new(id, data);
         println!("{:?}", &profile);
-        db.save_profile(profile);
+        db.save_profile(&profile);
     }
     Ok(())
 }

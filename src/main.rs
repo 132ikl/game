@@ -103,7 +103,7 @@ fn index_redir() -> Redirect {
 fn get(mut profile: Profile) -> Redirect {
     if profile.update().is_none() {
         profile.data.points += 1;
-        Database::open().save_profile(profile)
+        Database::open().save_profile(&profile)
     };
     Redirect::to("/")
 }
@@ -137,7 +137,7 @@ fn register(form: Form<Login>) -> Flash<Redirect> {
     let hash = bcrypt::hash(&form.password, 4).unwrap();
     let data = UserData::new(form.username.clone(), hash);
     let profile = Profile::new(db.gen_id().to_string(), data);
-    db.save_profile(profile);
+    db.save_profile(&profile);
 
     Flash::success(Redirect::to("/login"), "Account creation successful")
 }
@@ -193,18 +193,19 @@ fn shop(profile: Profile) -> Template {
 #[post("/buy", data = "<form>")]
 fn buy(mut profile: Profile, form: Form<BuyForm>) -> Result<Redirect, Redirect> {
     let r = || Redirect::to("/shop");
-    let price = ShopItem::get_price(&profile, &form.item).ok_or(r())?;
+    let price = form.item.get_price(&profile).ok_or(r())?;
     if profile.data.items.contains(&form.item) {
         // sell if already owned
         profile.data.points += price;
         profile.data.items.retain(|x| x != &form.item);
+        Database::open().save_profile(&profile);
     } else {
         if profile.data.points >= price {
             profile.data.points -= price;
             profile.data.items.push(form.item);
+            form.item.buy_hook(&mut profile) // profile saving handled in buy hook
         }
     }
-    Database::open().save_profile(profile);
     Ok(r())
 }
 

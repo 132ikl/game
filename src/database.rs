@@ -15,9 +15,9 @@ impl Database {
         Database { db }
     }
 
-    pub fn save_profile(&self, profile: Profile) {
+    pub fn save_profile(&self, profile: &Profile) {
         self.db
-            .insert(profile.id, profile.data)
+            .insert(&profile.id, &profile.data)
             .expect("Failed to insert");
     }
 
