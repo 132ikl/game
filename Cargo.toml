@@ -4,7 +4,7 @@ version = "1.0.6"
 authors = ["132ikl <132@ikl.sh>"]
 description = "eccentric skinner box point-collecting game"
 license = "AGPL-3.0"
-repository = "https://github.com/132ikl/game"
+repository = "https://git.ikl.sh/132ikl/game"
 edition = "2018"
 
 [dependencies]
